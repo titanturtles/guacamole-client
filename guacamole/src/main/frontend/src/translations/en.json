@@ -897,6 +897,10 @@
         "FIELD_HEADER_RECORDING_EXCLUDE_MOUSE"  : "Exclude mouse:",
         "FIELD_HEADER_RECORDING_EXCLUDE_OUTPUT" : "Exclude graphics/streams:",
         "FIELD_HEADER_RECORDING_INCLUDE_KEYS"   : "Include key events:",
+        "FIELD_HEADER_GENERAL_README"   : "Readme:",
+        "FIELD_HEADER_GENERAL_DOWNLOADS"   : "Downloads:",
+        "FIELD_HEADER_GENERAL_SCOREBOARD"   : "Scoreboard:",
+        "FIELD_HEADER_GENERAL_WRITEUPS"   : "Write-ups:",
         "FIELD_HEADER_RECORDING_NAME" : "Recording name:",
         "FIELD_HEADER_RECORDING_PATH" : "Recording path:",
         "FIELD_HEADER_SFTP_DIRECTORY"             : "Default upload directory:",
@@ -936,6 +940,7 @@
 
         "NAME" : "VNC",
 
+        "SECTION_HEADER_GEENRAL"        : "General",
         "SECTION_HEADER_AUDIO"          : "Audio",
         "SECTION_HEADER_AUTHENTICATION" : "Authentication",
         "SECTION_HEADER_CLIPBOARD"      : "Clipboard",

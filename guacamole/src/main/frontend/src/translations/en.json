@@ -940,7 +940,7 @@
 
         "NAME" : "VNC",
 
-        "SECTION_HEADER_GEENRAL"        : "General",
+        "SECTION_HEADER_GENERAL"        : "General",
         "SECTION_HEADER_AUDIO"          : "Audio",
         "SECTION_HEADER_AUTHENTICATION" : "Authentication",
         "SECTION_HEADER_CLIPBOARD"      : "Clipboard",

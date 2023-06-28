@@ -135,6 +135,15 @@ angular.module('index').config(['$routeProvider', '$locationProvider',
             resolve       : { updateCurrentToken: updateCurrentToken }
         })
 
+        // Images pool page
+        .when('/import/:dataSource/imagespool', {
+            title         : 'APP.NAME',
+            bodyClassName : 'settings',
+            templateUrl   : 'app/import/templates/connectionImport.html',
+            controller    : 'importConnectionsController',
+            resolve       : { updateCurrentToken: updateCurrentToken }
+        })
+
         // Connection import file format help page
         .when('/import/connection/file-format-help', {
             title         : 'APP.NAME',

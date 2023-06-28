@@ -215,6 +215,7 @@ angular.module('navigation').factory('userPageService', ['$injector',
         var canManageUsers = [];
         var canManageUserGroups = [];
         var canManageConnections = [];
+        var canManageImagesPool = [];
         var canViewConnectionRecords = [];
 
         // Inspect the contents of each provided permission set
@@ -276,27 +277,30 @@ angular.module('navigation').factory('userPageService', ['$injector',
 
             // Determine whether the current user needs access to the connection management UI
             if (
-                    // System permissions
-                       PermissionSet.hasSystemPermission(permissions, PermissionSet.SystemPermissionType.ADMINISTER)
-                    || PermissionSet.hasSystemPermission(permissions, PermissionSet.SystemPermissionType.CREATE_CONNECTION)
-                    || PermissionSet.hasSystemPermission(permissions, PermissionSet.SystemPermissionType.CREATE_CONNECTION_GROUP)
+                // System permissions
+                   PermissionSet.hasSystemPermission(permissions, PermissionSet.SystemPermissionType.ADMINISTER)
+                || PermissionSet.hasSystemPermission(permissions, PermissionSet.SystemPermissionType.CREATE_CONNECTION)
+                || PermissionSet.hasSystemPermission(permissions, PermissionSet.SystemPermissionType.CREATE_CONNECTION_GROUP)
 
-                    // Permission to update connections or connection groups
-                    || PermissionSet.hasConnectionPermission(permissions,      PermissionSet.ObjectPermissionType.UPDATE)
-                    || PermissionSet.hasConnectionGroupPermission(permissions, PermissionSet.ObjectPermissionType.UPDATE)
+                // Permission to update connections or connection groups
+                || PermissionSet.hasConnectionPermission(permissions,      PermissionSet.ObjectPermissionType.UPDATE)
+                || PermissionSet.hasConnectionGroupPermission(permissions, PermissionSet.ObjectPermissionType.UPDATE)
 
-                    // Permission to delete connections or connection groups
-                    || PermissionSet.hasConnectionPermission(permissions,      PermissionSet.ObjectPermissionType.DELETE)
-                    || PermissionSet.hasConnectionGroupPermission(permissions, PermissionSet.ObjectPermissionType.DELETE)
+                // Permission to delete connections or connection groups
+                || PermissionSet.hasConnectionPermission(permissions,      PermissionSet.ObjectPermissionType.DELETE)
+                || PermissionSet.hasConnectionGroupPermission(permissions, PermissionSet.ObjectPermissionType.DELETE)
 
-                    // Permission to administer connections or connection groups
-                    || PermissionSet.hasConnectionPermission(permissions,      PermissionSet.ObjectPermissionType.ADMINISTER)
-                    || PermissionSet.hasConnectionGroupPermission(permissions, PermissionSet.ObjectPermissionType.ADMINISTER)
+                // Permission to administer connections or connection groups
+                || PermissionSet.hasConnectionPermission(permissions,      PermissionSet.ObjectPermissionType.ADMINISTER)
+                || PermissionSet.hasConnectionGroupPermission(permissions, PermissionSet.ObjectPermissionType.ADMINISTER)
             ) {
                 canManageConnections.push(dataSource);
             }
 
-            // Determine whether the current user needs access to view connection history
+            // Determine whether the current user needs access to the connection management UI
+            canManageImagesPool.push(dataSource);
+
+    // Determine whether the current user needs access to view connection history
             if (
                     // A user must be a system administrator to view connection records
                     PermissionSet.hasSystemPermission(permissions, PermissionSet.SystemPermissionType.ADMINISTER)
@@ -347,6 +351,17 @@ angular.module('navigation').factory('userPageService', ['$injector',
                     translationStringService.canonicalize('DATA_SOURCE_' + dataSource) + '.NAME'
                 ],
                 url  : '/settings/' + encodeURIComponent(dataSource) + '/connections'
+            }));
+        });
+        
+        // If user can manage images pool, add links for images pool management pages
+        angular.forEach(canManageImagesPool, function addImagesPoolManagementLink(dataSource) {
+            pages.push(new PageDefinition({
+                name : [
+                    'USER_MENU.ACTION_MANAGE_IMAGES_POOL',
+                    translationStringService.canonicalize('DATA_SOURCE_' + dataSource) + '.NAME'
+                ],
+                url  : '/settings/' + encodeURIComponent(dataSource) + '/imagespool'
             }));
         });
 

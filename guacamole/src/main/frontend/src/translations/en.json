@@ -20,6 +20,7 @@
         "ACTION_LOGIN_AGAIN"        : "Re-login",
         "ACTION_LOGOUT"             : "Logout",
         "ACTION_MANAGE_CONNECTIONS" : "Connections",
+        "ACTION_MANAGE_IMAGES_POOL" : "Images Pool",
         "ACTION_MANAGE_PREFERENCES" : "Preferences",
         "ACTION_MANAGE_SETTINGS"    : "Settings",
         "ACTION_MANAGE_SESSIONS"    : "Active Sessions",
@@ -1000,6 +1001,26 @@
         "FIELD_PLACEHOLDER_FILTER" : "@:APP.FIELD_PLACEHOLDER_FILTER",
 
         "HELP_CONNECTIONS"   : "Click or tap on a connection below to manage that connection. Depending on your access level, connections can be added and deleted, and their properties (protocol, hostname, port, etc.) can be changed.",
+        
+        "INFO_ACTIVE_USER_COUNT" : "@:APP.INFO_ACTIVE_USER_COUNT",
+
+        "SECTION_HEADER_CONNECTIONS"     : "Connections"
+
+    },
+
+    "SETTINGS_IMAGESPOOL" : {
+
+        "ACTION_ACKNOWLEDGE"          : "@:APP.ACTION_ACKNOWLEDGE",
+        "ACTION_IMPORT"               : "@:APP.ACTION_IMPORT",
+        "ACTION_NEW_CONNECTION"       : "New Connection",
+        "ACTION_NEW_CONNECTION_GROUP" : "New Group",
+        "ACTION_NEW_SHARING_PROFILE"  : "New Sharing Profile",
+
+        "DIALOG_HEADER_ERROR" : "@:APP.DIALOG_HEADER_ERROR",
+
+        "FIELD_PLACEHOLDER_FILTER" : "@:APP.FIELD_PLACEHOLDER_FILTER",
+
+        "HELP_IMAGESPOOL"   : "Click upload button to upload image.",
         
         "INFO_ACTIVE_USER_COUNT" : "@:APP.INFO_ACTIVE_USER_COUNT",
 

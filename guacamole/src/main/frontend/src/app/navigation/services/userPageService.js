@@ -215,6 +215,7 @@ angular.module('navigation').factory('userPageService', ['$injector',
         var canManageUsers = [];
         var canManageUserGroups = [];
         var canManageConnections = [];
+        var canManageImagesPool = [];
         var canViewConnectionRecords = [];
 
         // Inspect the contents of each provided permission set
@@ -296,6 +297,9 @@ angular.module('navigation').factory('userPageService', ['$injector',
                 canManageConnections.push(dataSource);
             }
 
+            // Determine whether the current user needs access to the connection management UI
+            canManageImagesPool.push(dataSource);
+
             // Determine whether the current user needs access to view connection history
             if (
                     // A user must be a system administrator to view connection records
@@ -347,6 +351,17 @@ angular.module('navigation').factory('userPageService', ['$injector',
                     translationStringService.canonicalize('DATA_SOURCE_' + dataSource) + '.NAME'
                 ],
                 url  : '/settings/' + encodeURIComponent(dataSource) + '/connections'
+            }));
+        });
+
+        // If user can manage images pool, add links for images pool management pages
+        angular.forEach(canManageImagesPool, function addImagesPoolManagementLink(dataSource) {
+            pages.push(new PageDefinition({
+                name : [
+                    'USER_MENU.ACTION_MANAGE_IMAGES_POOL',
+                    translationStringService.canonicalize('DATA_SOURCE_' + dataSource) + '.NAME'
+                ],
+                url  : '/settings/' + encodeURIComponent(dataSource) + '/imagespool'
             }));
         });
 

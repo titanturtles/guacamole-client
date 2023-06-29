@@ -1,7 +1,27 @@
 {
     "name"  : "vnc",
     "connectionForms" : [
-
+        {
+            "name"  : "general",
+            "fields" : [
+                {
+                    "name"  : "general-readme",
+                    "type"  : "MULTILINE"
+                },
+                {
+                    "name"  : "general-downloads",
+                    "type"  : "MULTILINE"
+                },
+                {
+                    "name"  : "general-scoreboard",
+                    "type"  : "MULTILINE"
+                },
+                {
+                    "name"  : "general-writeups",
+                    "type"  : "MULTILINE"
+                }
+            ]
+        },
         {
             "name"  : "network",
             "fields" : [

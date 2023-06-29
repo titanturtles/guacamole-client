@@ -1015,6 +1015,7 @@
         "ACTION_NEW_CONNECTION"       : "New Connection",
         "ACTION_NEW_CONNECTION_GROUP" : "New Group",
         "ACTION_NEW_SHARING_PROFILE"  : "New Sharing Profile",
+        "ACTION_UPLOAD"  : "Upload Image",
 
         "DIALOG_HEADER_ERROR" : "@:APP.DIALOG_HEADER_ERROR",
 

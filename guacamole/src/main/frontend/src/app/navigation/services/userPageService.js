@@ -355,15 +355,12 @@ angular.module('navigation').factory('userPageService', ['$injector',
         });
 
         // If user can manage images pool, add links for images pool management pages
-        angular.forEach(canManageImagesPool, function addImagesPoolManagementLink(dataSource) {
+        if (canManageImagesPool.length) {
             pages.push(new PageDefinition({
-                name : [
-                    'USER_MENU.ACTION_MANAGE_IMAGES_POOL',
-                    translationStringService.canonicalize('DATA_SOURCE_' + dataSource) + '.NAME'
-                ],
-                url  : '/settings/' + encodeURIComponent(dataSource) + '/imagespool'
+                name : 'USER_MENU.ACTION_MANAGE_IMAGES_POOL',
+                url  : '/settings/imagespool'
             }));
-        });
+        }
 
         // Add link to user preferences (always accessible)
         pages.push(new PageDefinition({

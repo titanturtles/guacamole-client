@@ -10,9 +10,8 @@
         <div class="action-buttons">
 
             <a class="upload-image button"
-                ng-show="canAdminister()"
                 href="#/import/{{dataSource | escape}}/imageupload/">{{'SETTINGS_IMAGESPOOL.ACTION_UPLOAD' | translate}}</a>
-
+            <button class="upload button"  ng-click="uploadImage()">{{'SETTINGS_IMAGESPOOL.ACTION_UPLOAD' | translate}}</button><input type="file" id="file" name="file"/>
         </div>
 
     </div>

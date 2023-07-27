@@ -17,22 +17,33 @@
  * under the License.
  */
 
-package org.apache.guacamole.rest.connection;
+package org.apache.guacamole.rest.image;
 
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
+
+import java.io.FileOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.glassfish.jersey.media.multipart.FormDataContentDisposition;  
+
+import org.apache.guacamole.GuacamoleClientException;
 import org.apache.guacamole.GuacamoleException;
 import org.apache.guacamole.GuacamoleSecurityException;
 import org.apache.guacamole.GuacamoleUnsupportedException;
 import org.apache.guacamole.net.auth.ActivityRecordSet;
-import org.apache.guacamole.net.auth.Connection;
+import org.apache.guacamole.net.auth.Image;
 import org.apache.guacamole.net.auth.Directory;
 import org.apache.guacamole.net.auth.Permissions;
 import org.apache.guacamole.rest.directory.DirectoryView;
@@ -59,12 +70,12 @@ import org.slf4j.LoggerFactory;
  */
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class ConnectionResource extends DirectoryObjectResource<Connection, APIConnection> {
+public class ImageResource extends DirectoryObjectResource<Image, APIImage> {
 
     /**
      * Logger for this class.
      */
-    private static final Logger logger = LoggerFactory.getLogger(ConnectionResource.class);
+    private static final Logger logger = LoggerFactory.getLogger(ImageResource.class);
     
     /**
      * The UserContext associated with the Directory which contains the
@@ -75,41 +86,45 @@ public class ConnectionResource extends DirectoryObjectResource<Connection, APIC
     /**
      * The Connection object represented by this ConnectionResource.
      */
-    private final Connection connection;
+    private final Image image;
 
-    /**
-     * A factory which can be used to create instances of resources representing
-     * SharingProfiles.
-     */
-    @Inject
-    private DirectoryResourceFactory<SharingProfile, APISharingProfile>
-            sharingProfileDirectoryResourceFactory;
 
-    /**
-     * Creates a new ConnectionResource which exposes the operations and
-     * subresources available for the given Connection.
-     *
-     * @param userContext
-     *     The UserContext associated with the given Directory.
-     *
-     * @param directory
-     *     The Directory which contains the given Connection.
-     *
-     * @param connection
-     *     The Connection that this ConnectionResource should represent.
-     *
-     * @param translator
-     *     A DirectoryObjectTranslator implementation which handles the type of
-     *     object given.
-     */
+
     @AssistedInject
-    public ConnectionResource(@Assisted UserContext userContext,
-            @Assisted Directory<Connection> directory,
-            @Assisted Connection connection,
-            DirectoryObjectTranslator<Connection, APIConnection> translator) {
-        super(userContext, directory, connection, translator);
+    public ImageResource(@Assisted UserContext userContext,
+            @Assisted Directory<Image> directory,
+            @Assisted Image image,
+            DirectoryObjectTranslator<Image, APIImage> translator) {
+        super(userContext, directory, image, translator);
         this.userContext = userContext;
-        this.connection = connection;
+        this.image = image;
     }
+
+    @POST
+    @Path("/imageuploads")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)  
+    public Response imageUpload(
+            @FormDataParam("file") InputStream uploadedInputStream,  
+            @FormDataParam("file") FormDataContentDisposition fileDetail) {  
+
+            String fileLocation = "e://" + fileDetail.getFileName();  
+                    //saving file  
+            try {  
+                FileOutputStream out = new FileOutputStream(new File(fileLocation));  
+                int read = 0;  
+                byte[] bytes = new byte[1024];  
+                out = new FileOutputStream(new File(fileLocation));  
+                while ((read = uploadedInputStream.read(bytes)) != -1) {  
+                    out.write(bytes, 0, read);  
+                }  
+                out.flush();  
+                out.close();  
+            } catch (IOException e) {e.printStackTrace();}  
+            String output = "File successfully uploaded to : " + fileLocation;  
+            return Response.status(200).entity(output).build();  
+
+    }
+
+
 
 }

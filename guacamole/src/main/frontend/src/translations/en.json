@@ -941,7 +941,9 @@
         
         "INFO_ACTIVE_USER_COUNT" : "@:APP.INFO_ACTIVE_USER_COUNT",
 
-        "SECTION_HEADER_CONNECTIONS"     : "Connections"
+        "SECTION_HEADER_CONNECTIONS"     : "Connections",
+
+        "ACTION_UPLOAD"                 : "Upload Virtual Image"
 
     },
 

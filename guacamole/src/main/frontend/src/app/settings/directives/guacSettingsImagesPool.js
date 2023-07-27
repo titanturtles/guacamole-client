@@ -18,7 +18,7 @@
  */
 
 /**
- * A directive for managing all images in the pool the system.
+ * A directive for managing images pool in the system.
  */
 angular.module('settings').directive('guacSettingsImagesPool', [function guacSettingsImagesPool() {
     
@@ -34,67 +34,95 @@ angular.module('settings').directive('guacSettingsImagesPool', [function guacSet
         controller: ['$scope', '$injector', function settingsImagesPoolController($scope, $injector) {
 
             // Required types
-            var ConnectionGroup = $injector.get('ConnectionGroup');
-            var GroupListItem   = $injector.get('GroupListItem');
+            var ManageableUser  = $injector.get('ManageableUser');
             var PermissionSet   = $injector.get('PermissionSet');
+            var SortOrder       = $injector.get('SortOrder');
 
             // Required services
             var $location              = $injector.get('$location');
-            var $routeParams           = $injector.get('$routeParams');
+            var $translate             = $injector.get('$translate');
             var authenticationService  = $injector.get('authenticationService');
-            var connectionGroupService = $injector.get('connectionGroupService');
             var dataSourceService      = $injector.get('dataSourceService');
-            var guacNotification       = $injector.get('guacNotification');
             var permissionService      = $injector.get('permissionService');
             var requestService         = $injector.get('requestService');
+            var userService            = $injector.get('userService');
+            var imagesPoolService      = $injector.get('imagesPoolService');
 
-            /**
-             * The identifier of the current user.
-             *
-             * @type String
-             */
+            // Identifier of the current user
             var currentUsername = authenticationService.getCurrentUsername();
 
             /**
-             * The identifier of the currently-selected data source.
+             * The identifiers of all data sources accessible by the current
+             * user.
+             *
+             * @type String[]
+             */
+            var dataSources = authenticationService.getAvailableDataSources();
+
+            /**
+             * All visible users, along with their corresponding data sources.
+             *
+             * @type ManageableUser[]
+             */
+            $scope.manageableUsers = null;
+
+            /**
+             * The name of the new user to create, if any, when user creation
+             * is requested via newUser().
              *
              * @type String
              */
-            $scope.dataSource = $routeParams.dataSource;
+            $scope.newUsername = "";
 
             /**
-             * The root connection group of the connection group hierarchy.
-             *
-             * @type Object.<String, ConnectionGroup>
-             */
-            $scope.rootGroups = null;
-
-            /**
-             * All permissions associated with the current user, or null if the
+             * Map of data source identifiers to all permissions associated
+             * with the current user within that data source, or null if the
              * user's permissions have not yet been loaded.
              *
-             * @type PermissionSet
+             * @type Object.<String, PermissionSet>
              */
             $scope.permissions = null;
 
             /**
-             * Array of all connection properties that are filterable.
+             * Array of all user properties that are filterable.
              *
              * @type String[]
              */
-            $scope.filteredConnectionProperties = [
-                'name',
-                'protocol'
+            $scope.filteredUserProperties = [
+                'user.attributes["guac-full-name"]',
+                'user.attributes["guac-organization"]',
+                'user.lastActive',
+                'user.username'
             ];
 
             /**
-             * Array of all connection group properties that are filterable.
+             * The date format for use for the last active date.
              *
-             * @type String[]
+             * @type String
              */
-            $scope.filteredConnectionGroupProperties = [
-                'name'
-            ];
+            $scope.dateFormat = null;
+
+            /**
+             * SortOrder instance which stores the sort order of the listed
+             * users.
+             *
+             * @type SortOrder
+             */
+            $scope.order = new SortOrder([
+                'user.username',
+                '-user.lastActive',
+                'user.attributes["guac-organization"]',
+                'user.attributes["guac-full-name"]'
+            ]);
+
+            // Get session date format
+            $translate('SETTINGS_USERS.FORMAT_DATE')
+            .then(function dateFormatReceived(retrievedDateFormat) {
+
+                // Store received date format
+                $scope.dateFormat = retrievedDateFormat;
+
+            }, angular.noop);
 
             /**
              * Returns whether critical data has completed being loaded.
@@ -105,338 +133,175 @@ angular.module('settings').directive('guacSettingsImagesPool', [function guacSet
              */
             $scope.isLoaded = function isLoaded() {
 
-                return $scope.rootGroup   !== null
-                    && $scope.permissions !== null;
+                return $scope.dateFormat      !== null
+                    && $scope.manageableUsers !== null
+                    && $scope.permissions     !== null;
 
             };
 
             /**
-             * Returns whether the current user has the ADMINISTER system
-             * permission (i.e. they are an administrator).
+             * Returns the identifier of the data source that should be used by
+             * default when creating a new user.
              *
-             * @return {Boolean}
-             *     true if the current user is an administrator.
+             * @return {String}
+             *     The identifier of the data source that should be used by
+             *     default when creating a new user, or null if user creation
+             *     is not allowed.
              */
-            $scope.canAdminister = function canAdminister() {
+            $scope.getDefaultDataSource = function getDefaultDataSource() {
 
                 // Abort if permissions have not yet loaded
                 if (!$scope.permissions)
-                    return false;
+                    return null;
 
-                // Return whether the current user is an administrator
-                return PermissionSet.hasSystemPermission(
-                        $scope.permissions, PermissionSet.SystemPermissionType.ADMINISTER);
+                // For each data source
+                var dataSources = _.keys($scope.permissions).sort();
+                for (var i = 0; i < dataSources.length; i++) {
+
+                    // Retrieve corresponding permission set
+                    var dataSource = dataSources[i];
+                    var permissionSet = $scope.permissions[dataSource];
+
+                    // Can create users if adminstrator or have explicit permission
+                    if (PermissionSet.hasSystemPermission(permissionSet, PermissionSet.SystemPermissionType.ADMINISTER)
+                     || PermissionSet.hasSystemPermission(permissionSet, PermissionSet.SystemPermissionType.CREATE_USER))
+                        return dataSource;
+
+                }
+
+                // No data sources allow user creation
+                return null;
+
             };
 
             /**
-             * Returns whether the current user can create new connections
-             * within the current data source.
+             * Returns whether the current user can create new users within at
+             * least one data source.
              *
              * @return {Boolean}
-             *     true if the current user can create new connections within
-             *     the current data source, false otherwise.
+             *     true if the current user can create new users within at
+             *     least one data source, false otherwise.
              */
-            $scope.canCreateConnections = function canCreateConnections() {
-
-                // Abort if permissions have not yet loaded
-                if (!$scope.permissions)
-                    return false;
-
-                // Can create connections if adminstrator or have explicit permission
-                if (PermissionSet.hasSystemPermission($scope.permissions, PermissionSet.SystemPermissionType.ADMINISTER)
-                 || PermissionSet.hasSystemPermission($scope.permissions, PermissionSet.SystemPermissionType.CREATE_CONNECTION))
-                     return true;
-
-                // No data sources allow connection creation
-                return false;
-
+            $scope.canCreateUsers = function canCreateUsers() {
+                return $scope.getDefaultDataSource() !== null;
             };
 
-            /**
-             * Returns whether the current user can create new connection
-             * groups within the current data source.
-             *
-             * @return {Boolean}
-             *     true if the current user can create new connection groups
-             *     within the current data source, false otherwise.
-             */
-            $scope.canCreateConnectionGroups = function canCreateConnectionGroups() {
-
-                // Abort if permissions have not yet loaded
-                if (!$scope.permissions)
-                    return false;
-
-                // Can create connections groups if adminstrator or have explicit permission
-                if (PermissionSet.hasSystemPermission($scope.permissions, PermissionSet.SystemPermissionType.ADMINISTER)
-                 || PermissionSet.hasSystemPermission($scope.permissions, PermissionSet.SystemPermissionType.CREATE_CONNECTION_GROUP))
-                     return true;
-
-                // No data sources allow connection group creation
-                return false;
-
-            };
+            $scope.uploadImage = function uploadImage() {
+                console.log('guacSettingsImagesPool.js uploadImage');
+                var f = document.getElementById('file').files[0],
+                r = new FileReader();
+        
+                r.onloadend = function(e) {
+                    var data = e.target.result;
+                    //send your binary data via $http or $resource or do anything else with it
+                    console.log('uploadImage', data);
+                }
+            
+                r.readAsArrayBuffer(f);
+            }
 
             /**
-             * Returns whether the current user can create new sharing profiles
-             * within the current data source.
+             * Returns whether the current user can create new users or make
+             * changes to existing users within at least one data source. The
+             * user management interface as a whole is useless if this function
+             * returns false.
              *
              * @return {Boolean}
-             *     true if the current user can create new sharing profiles
-             *     within the current data source, false otherwise.
-             */
-            $scope.canCreateSharingProfiles = function canCreateSharingProfiles() {
-
-                // Abort if permissions have not yet loaded
-                if (!$scope.permissions)
-                    return false;
-
-                // Can create sharing profiles if adminstrator or have explicit permission
-                if (PermissionSet.hasSystemPermission($scope.permissions, PermissionSet.SystemPermissionType.ADMINISTER)
-                 || PermissionSet.hasSystemPermission($scope.permissions, PermissionSet.SystemPermissionType.CREATE_SHARING_PROFILE))
-                     return true;
-
-                // Current data source does not allow sharing profile creation
-                return false;
-
-            };
-
-            /**
-             * Returns whether the current user can create new connections or
-             * connection groups or make changes to existing connections or
-             * connection groups within the current data source. The
-             * connection management interface as a whole is useless if this
-             * function returns false.
-             *
-             * @return {Boolean}
-             *     true if the current user can create new connections/groups
-             *     or make changes to existing connections/groups within the
-             *     current data source, false otherwise.
-             */
-            $scope.canManageConnections = function canManageConnections() {
-
-                // Abort if permissions have not yet loaded
-                if (!$scope.permissions)
-                    return false;
-
-                // Creating connections/groups counts as management
-                if ($scope.canCreateConnections()
-                        || $scope.canCreateConnectionGroups()
-                        || $scope.canCreateSharingProfiles())
-                    return true;
-
-                // Can manage connections if granted explicit update or delete
-                if (PermissionSet.hasConnectionPermission($scope.permissions, PermissionSet.ObjectPermissionType.UPDATE)
-                 || PermissionSet.hasConnectionPermission($scope.permissions, PermissionSet.ObjectPermissionType.DELETE))
-                    return true;
-
-                // Can manage connections groups if granted explicit update or delete
-                if (PermissionSet.hasConnectionGroupPermission($scope.permissions, PermissionSet.ObjectPermissionType.UPDATE)
-                 || PermissionSet.hasConnectionGroupPermission($scope.permissions, PermissionSet.ObjectPermissionType.DELETE))
-                    return true;
-
-                // No data sources allow management of connections or groups
-                return false;
-
-            };
-
-            /**
-             * Returns whether the current user can update the connection having
-             * the given identifier within the current data source.
-             *
-             * @param {String} identifier
-             *     The identifier of the connection to check.
-             *
-             * @return {Boolean}
-             *     true if the current user can update the connection having the
-             *     given identifier within the current data source, false
-             *     otherwise.
-             */
-            $scope.canUpdateConnection = function canUpdateConnection(identifier) {
-
-                // Abort if permissions have not yet loaded
-                if (!$scope.permissions)
-                    return false;
-
-                // Can update the connection if adminstrator or have explicit permission
-                if (PermissionSet.hasSystemPermission($scope.permissions, PermissionSet.SystemPermissionType.ADMINISTER)
-                 || PermissionSet.hasConnectionPermission($scope.permissions, PermissionSet.ObjectPermissionType.UPDATE, identifier))
-                     return true;
-
-                // Current data sources does not allow the connection to be updated
-                return false;
-
-            };
-
-            /**
-             * Returns whether the current user can update the connection group
-             * having the given identifier within the current data source.
-             *
-             * @param {String} identifier
-             *     The identifier of the connection group to check.
-             *
-             * @return {Boolean}
-             *     true if the current user can update the connection group
-             *     having the given identifier within the current data source,
+             *     true if the current user can create new users or make
+             *     changes to existing users within at least one data source,
              *     false otherwise.
              */
-            $scope.canUpdateConnectionGroup = function canUpdateConnectionGroup(identifier) {
+            var canManageUsers = function canManageUsers() {
 
                 // Abort if permissions have not yet loaded
                 if (!$scope.permissions)
                     return false;
 
-                // Can update the connection if adminstrator or have explicit permission
-                if (PermissionSet.hasSystemPermission($scope.permissions, PermissionSet.SystemPermissionType.ADMINISTER)
-                 || PermissionSet.hasConnectionGroupPermission($scope.permissions, PermissionSet.ObjectPermissionType.UPDATE, identifier))
-                     return true;
+                // Creating users counts as management
+                if ($scope.canCreateUsers())
+                    return true;
 
-                // Current data sources does not allow the connection group to be updated
+                // For each data source
+                for (var dataSource in $scope.permissions) {
+
+                    // Retrieve corresponding permission set
+                    var permissionSet = $scope.permissions[dataSource];
+
+                    // Can manage users if granted explicit update or delete
+                    if (PermissionSet.hasUserPermission(permissionSet, PermissionSet.ObjectPermissionType.UPDATE)
+                     || PermissionSet.hasUserPermission(permissionSet, PermissionSet.ObjectPermissionType.DELETE))
+                        return true;
+
+                }
+
+                // No data sources allow management of users
                 return false;
 
             };
 
-            /**
-             * Adds connection-group-specific contextual actions to the given
-             * array of GroupListItems. Each contextual action will be
-             * represented by a new GroupListItem.
-             *
-             * @param {GroupListItem[]} items
-             *     The array of GroupListItems to which new GroupListItems
-             *     representing connection-group-specific contextual actions
-             *     should be added.
-             *
-             * @param {GroupListItem} [parent]
-             *     The GroupListItem representing the connection group which
-             *     contains the given array of GroupListItems, if known.
-             */
-            var addConnectionGroupActions = function addConnectionGroupActions(items, parent) {
-
-                // Do nothing if we lack permission to modify the parent at all
-                if (parent && !$scope.canUpdateConnectionGroup(parent.identifier))
-                    return;
-
-                // Add action for creating a child connection, if the user has
-                // permission to do so
-                if ($scope.canCreateConnections())
-                    items.push(new GroupListItem({
-                        type        : 'new-connection',
-                        dataSource  : $scope.dataSource,
-                        weight      : 1,
-                        wrappedItem : parent
-                    }));
-
-                // Add action for creating a child connection group, if the user
-                // has permission to do so
-                if ($scope.canCreateConnectionGroups())
-                    items.push(new GroupListItem({
-                        type        : 'new-connection-group',
-                        dataSource  : $scope.dataSource,
-                        weight      : 1,
-                        wrappedItem : parent
-                    }));
-
-            };
-
-            /**
-             * Adds connection-specific contextual actions to the given array of
-             * GroupListItems. Each contextual action will be represented by a
-             * new GroupListItem.
-             *
-             * @param {GroupListItem[]} items
-             *     The array of GroupListItems to which new GroupListItems
-             *     representing connection-specific contextual actions should
-             *     be added.
-             *
-             * @param {GroupListItem} [parent]
-             *     The GroupListItem representing the connection which contains
-             *     the given array of GroupListItems, if known.
-             */
-            var addConnectionActions = function addConnectionActions(items, parent) {
-
-                // Do nothing if we lack permission to modify the parent at all
-                if (parent && !$scope.canUpdateConnection(parent.identifier))
-                    return;
-
-                // Add action for creating a child sharing profile, if the user
-                // has permission to do so
-                if ($scope.canCreateSharingProfiles())
-                    items.push(new GroupListItem({
-                        type        : 'new-sharing-profile',
-                        dataSource  : $scope.dataSource,
-                        weight      : 1,
-                        wrappedItem : parent
-                    }));
-
-            };
-
-            /**
-             * Decorates the given GroupListItem, including all descendants,
-             * adding contextual actions.
-             *
-             * @param {GroupListItem} item
-             *     The GroupListItem which should be decorated with additional
-             *     GroupListItems representing contextual actions.
-             */
-            var decorateItem = function decorateItem(item) {
-
-                // If the item is a connection group, add actions specific to
-                // connection groups
-                if (item.type === GroupListItem.Type.CONNECTION_GROUP)
-                    addConnectionGroupActions(item.children, item);
-
-                // If the item is a connection, add actions specific to
-                // connections
-                else if (item.type === GroupListItem.Type.CONNECTION)
-                    addConnectionActions(item.children, item);
-
-                // Decorate all children
-                angular.forEach(item.children, decorateItem);
-
-            };
-
-            /**
-             * Callback which decorates all items within the given array of
-             * GroupListItems, including their descendants, adding contextual
-             * actions.
-             *
-             * @param {GroupListItem[]} items
-             *     The array of GroupListItems which should be decorated with
-             *     additional GroupListItems representing contextual actions.
-             */
-            $scope.rootItemDecorator = function rootItemDecorator(items) {
-
-                // Decorate each root-level item
-                angular.forEach(items, decorateItem);
-
-            };
+            
 
             // Retrieve current permissions
-            permissionService.getEffectivePermissions($scope.dataSource, currentUsername)
+            dataSourceService.apply(
+                permissionService.getEffectivePermissions,
+                dataSources,
+                currentUsername
+            )
             .then(function permissionsRetrieved(permissions) {
 
                 // Store retrieved permissions
                 $scope.permissions = permissions;
 
-                // Ignore permission to update root group
-                PermissionSet.removeConnectionGroupPermission($scope.permissions, PermissionSet.ObjectPermissionType.UPDATE, ConnectionGroup.ROOT_IDENTIFIER);
-
                 // Return to home if there's nothing to do here
-                if (!$scope.canManageConnections())
+                if (!canManageUsers())
                     $location.path('/');
 
-                // Retrieve all connections for which we have UPDATE or DELETE permission
-                dataSourceService.apply(
-                    connectionGroupService.getConnectionGroupTree,
-                    [$scope.dataSource],
-                    ConnectionGroup.ROOT_IDENTIFIER,
-                    [PermissionSet.ObjectPermissionType.UPDATE, PermissionSet.ObjectPermissionType.DELETE]
-                )
-                .then(function connectionGroupsReceived(rootGroups) {
-                    $scope.rootGroups = rootGroups;
+                var userPromise;
+
+                // If users can be created, list all readable users
+                if ($scope.canCreateUsers())
+                    userPromise = dataSourceService.apply(userService.getUsers, dataSources);
+
+                // Otherwise, list only updateable/deletable users
+                else
+                    userPromise = dataSourceService.apply(userService.getUsers, dataSources, [
+                        PermissionSet.ObjectPermissionType.UPDATE,
+                        PermissionSet.ObjectPermissionType.DELETE
+                    ]);
+
+                userPromise.then(function usersReceived(allUsers) {
+
+                    var addedUsers = {};
+                    $scope.manageableUsers = [];
+
+                    // For each user in each data source
+                    angular.forEach(dataSources, function addUserList(dataSource) {
+                        angular.forEach(allUsers[dataSource], function addUser(user) {
+
+                            // Do not add the same user twice
+                            if (addedUsers[user.username])
+                                return;
+
+                            // Link to default creation data source if we cannot manage this user
+                            if (!PermissionSet.hasSystemPermission(permissions[dataSource], PermissionSet.ObjectPermissionType.ADMINISTER)
+                             && !PermissionSet.hasUserPermission(permissions[dataSource], PermissionSet.ObjectPermissionType.UPDATE, user.username)
+                             && !PermissionSet.hasUserPermission(permissions[dataSource], PermissionSet.ObjectPermissionType.DELETE, user.username))
+                                dataSource = $scope.getDefaultDataSource();
+
+                            // Add user to overall list
+                            addedUsers[user.username] = user;
+                            $scope.manageableUsers.push(new ManageableUser ({
+                                'dataSource' : dataSource,
+                                'user'       : user
+                            }));
+
+                        });
+                    });
+
                 }, requestService.DIE);
 
-            }, requestService.DIE); // end retrieve permissions
-
+            }, requestService.DIE);
+            
         }]
     };
     
